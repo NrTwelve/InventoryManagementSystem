@@ -1,15 +1,13 @@
 import threading
 import socket               # Import socket module
-from thread_handler import ThreadHandler
-
+import thread_handler
+import service_base as base
 
 MAX_NUMBER_CONNECTION = 5
-CONNECTION_PORT = 60000
 
 class Gateway(object):
     """docstring for Gateway"""
     def __init__(self):
-        self.thread_handlers = list()
         self.server_socket = ""
         self.initialize_socket_server()
 
@@ -17,12 +15,11 @@ class Gateway(object):
         """ Create a new socket server """
         self.server_socket = socket.socket()
         host = socket.gethostname()          # Get local machine name
-        self.server_socket.bind((host, CONNECTION_PORT))      # Bind to the port
+        self.server_socket.bind((host, base.SERVER_PORT))      # Bind to the port
 
     def is_allowed_connection(self):
         """ Check current status of all thread, return True for allowing new connection """
-        self.thread_handlers = [t for t in self.thread_handlers if not t.handled]
-        if len(self.thread_handlers) > MAX_NUMBER_CONNECTION: # check for the maximum connection
+        if threading.active_count() == MAX_NUMBER_CONNECTION + 1: # check for the maximum connection + caller thread
             return False
         return True
 
@@ -31,15 +28,13 @@ class Gateway(object):
         while True:
             self.server_socket.listen(5)
             c, addr = self.server_socket.accept()     # Establish connection with client.
-            if not is_allowed_connection:
-                c.send("Reach to maximum number of connections.")
+            if self.is_allowed_connection() == False:
+                c.sendall(base.DENY_SERVICE_MESSAGE)
                 c.close()
                 continue
 
-            handler = ThreadHandler()
-            t = threading.Thread(target=handler.run, args=(len(self.thread_handlers), c))
-            self.thread_handlers.append(t)
-            t.start()
+            handler = thread_handler.ThreadHandler(c)
+            handler.start()
 
 
 if __name__ == '__main__':
