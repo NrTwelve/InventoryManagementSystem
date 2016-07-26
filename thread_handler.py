@@ -14,7 +14,7 @@ class ThreadHandler(base.ServiceBase, threading.Thread):
         self.client_socket = client_socket
 
     def parse_message(self, message):
-        """ parse given command into valid querry commands """
+        """ parse given command into valid query commands """
         template = db.QUERRY_FRAME
         arguments = message.split(" ")
         if arguments[0] in db.handler.commands_available:
@@ -24,16 +24,16 @@ class ThreadHandler(base.ServiceBase, threading.Thread):
         else:
             return False, None
 
-    def execute_querry(self, message):
+    def execute_query(self, message):
         """  """
-        status, querry_fr = self.parse_message(message)
+        status, query_fr = self.parse_message(message)
         if status:
-            status, data = db.handler.execute(querry_fr)
+            status, data = db.handler.execute(query_fr)
             if status:
                 self.send_data_message(self.client_socket, data)
                 return
 
-        # fail on excuting querry
+        # fail on excuting query
         self.send_error_message(self.client_socket,
                         "Invalid commands for querring data!")
 
@@ -45,7 +45,7 @@ class ThreadHandler(base.ServiceBase, threading.Thread):
                 if message == base.EXIT_COMMAND:
                     break
                 elif message:
-                    self.execute_querry(message)
+                    self.execute_query(message)
             except socket.error:
                 print 'Client socket terminates connection!'
                 break

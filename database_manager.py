@@ -87,12 +87,12 @@ class DataBaseManager(object):
         data_str = self.data_pretty_print(data_dict)
         return data_str
 
-    def execute(self, querry_frame):
+    def execute(self, query_frame):
         """ entry function to execute all command """
-        if isinstance(querry_frame, dict) and querry_frame.has_key(QUERRY_COMMAND) \
-                                            and querry_frame.has_key(QUERRY_ARGUMENTS):
-            func_handler = self.command_map[querry_frame[QUERRY_COMMAND]]
-            data = func_handler(querry_frame[QUERRY_ARGUMENTS])
+        if isinstance(query_frame, dict) and query_frame.has_key(QUERRY_COMMAND) \
+                                            and query_frame.has_key(QUERRY_ARGUMENTS):
+            func_handler = self.command_map[query_frame[QUERRY_COMMAND]]
+            data = func_handler(query_frame[QUERRY_ARGUMENTS])
             return True, data
         else:
             # invaid frame
