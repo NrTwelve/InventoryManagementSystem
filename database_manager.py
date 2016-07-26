@@ -18,12 +18,12 @@ CREATE TABLE Inventory (
 '''
 
 ENTRY_DATA_TEMPLATE = {"type": "",
-                        "model": "",
-                        "serial_number": "",
-                        "import_date": "",
-                        "location": "",
-                        "status": "",
-                        "owner": ""}
+                       "model": "",
+                       "serial_number": "",
+                       "import_date": "",
+                       "location": "",
+                       "status": "",
+                       "owner": ""}
 
 QUERRY_COMMAND = "command"
 QUERRY_ARGUMENTS = "arguments"
@@ -36,6 +36,7 @@ class DataBaseManager(object):
     def __init__(self):
         # temporary disconnect thread safe
         #TODO: adding threadsafe checking
+        super(DataBaseManager, self).__init__()
         self.connection = sqlite3.connect('inventorydb.sqlite', check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
         self.cursor = self.connection.cursor()
@@ -60,21 +61,22 @@ class DataBaseManager(object):
             data_template = ENTRY_DATA_TEMPLATE
             for key, value in new_data.items():
                 if data_template.has_key(key):
-                    data_template[key] = new_data[key]
+                    data_template[key] = value
 
             self.cursor.execute('''INSERT OR IGNORE INTO Inventory (
                 type, model, serial_number, import_date, location, status, owner) 
-                VALUES ( ?, ?, ?, ?, ?, ?, ? )''', (data_template["type"],
-                data_template["model"], data_template["serial_number"],
-                data_template["import_date"], data_template["location"],
-                data_template["status"], data_template["owner"],))
+                VALUES ( ?, ?, ?, ?, ?, ?, ? )''',
+                (data_template["type"], data_template["model"],
+                data_template["serial_number"], data_template["import_date"],
+                data_template["location"], data_template["status"], data_template["owner"]))
             self.connection.commit()
 
     def find(self, args):
         """ Querry data from database for given conditions """
         r = self.cursor.execute("SELECT * FROM Inventory; ")
         result = r.fetchall()
-        item_list = map(lambda x: dict(x), result) # convert to list of entry data stored by key/value pair
+        # convert to list of entry data stored by key/value pair
+        item_list = [dict(x) for x in result]
         data_dict = dict()
         for item in item_list: # convert to dictionary of list value base on column name
             for key, value in item.items():

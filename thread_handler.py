@@ -35,14 +35,14 @@ class ThreadHandler(base.ServiceBase, threading.Thread):
 
         # fail on excuting querry
         self.send_error_message(self.client_socket,
-                        "Invalid commands for data querry!")
+                        "Invalid commands for querring data!")
 
     def run(self):
         self.client_socket.sendall(base.ACCEPT_SERVICE_MESSAGE)
         while True:
             try:
                 message = self.client_socket.recv(base.MESSAGE_CHUNK_SIZE)
-                if message == "end":
+                if message == base.EXIT_COMMAND:
                     break
                 elif message:
                     self.execute_querry(message)

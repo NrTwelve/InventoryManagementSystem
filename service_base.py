@@ -2,11 +2,13 @@
 import cPickle
 
 MESSAGE_CHUNK_SIZE = 4096
-SERVER_PORT =  60000                # Reserve a port for the service.
+SERVER_DEFAULT_PORT = 60000                # Reserve a port for the service.
 CONSOLE_TERM = "MngSys>> "
+EXIT_COMMAND = "exit"
+
 
 ACCEPT_SERVICE_MESSAGE = "Welcome to the Inventory Management System!"
-DENY_SERVICE_MESSAGE = "DENY! Reach to maximum number of connections."
+DENY_SERVICE_MESSAGE = "ACCESS DENIED! Reach to maximum number of connections."
 
 
 class ServiceBase(object):
