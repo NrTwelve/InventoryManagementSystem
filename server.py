@@ -4,7 +4,8 @@ import threading
 import socket
 
 import thread_handler
-import service_base as base
+import service_base as service
+import database_manager as db
 
 MAX_NUMBER_CONNECTION = 5
 WELCOME_MESSAGE = "Welcome to the Inventory Manager System!\nConnection port is: %s"
@@ -33,24 +34,37 @@ class Gateway(object):
             return False
         return True
 
+    def authenticate(self, client_socket):
+        info = service.receive_data_message(client_socket)
+        result = db.handler.verify_user_info(info)
+        service.send_data_message(client_socket, result)
+        return result, info['username']
+
     def run(self):
         """ Main function for gateway, listen to socket connection """
+        if not db.handler.administrator_check():
+            print "Administrator account is required! Please create ones ..."
+            user_info = service.create_user_info()
+            db.handler.add_user(user_info, db.ADMINISTRATOR_TYPE)
+
         while True:
             self.server_socket.listen(5)
             c, addr = self.server_socket.accept()     # Establish connection with client.
             if self.is_allowed_connection() is False:
-                c.sendall(base.DENY_SERVICE_MESSAGE)
+                c.sendall(service.DENY_SERVICE_MESSAGE)
                 c.close()
                 continue
-
-            handler = thread_handler.ThreadHandler(c)
-            handler.start()
+            c.sendall(service.WELCOME_SERVICE_MESSAGE)
+            result, username = self.authenticate(c)
+            if result:
+                handler = thread_handler.ThreadHandler(c, username)
+                handler.start()
 
 
 if __name__ == '__main__':
     usage = "usage: python %prog [options]"
     parser = optparse.OptionParser(usage=usage)
-    parser.add_option("-p", "--port", default=base.SERVER_DEFAULT_PORT,
+    parser.add_option("-p", "--port", default=service.SERVER_DEFAULT_PORT,
                         help="socket server listen port [default: %default]")
     (options, args) = parser.parse_args()
 

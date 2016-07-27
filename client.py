@@ -1,13 +1,22 @@
 import socket
 import optparse
-import service_base as base
+import service_base as service
 
-class InventoryClient(base.ServiceBase):
+class InventoryClient(object):
     """ InventoryClient for connecting and query information from InventoryServer """
     def __init__(self):
         """ InventoryClient Constructor """
         super(InventoryClient, self).__init__()
         self.client_socket = socket.socket()
+
+    def authenticate(self):
+        """ check authorization for current session """
+        user_info = service.create_user_info()
+        service.send_data_message(self.client_socket, user_info)
+        respone = service.receive_data_message(self.client_socket)
+        if respone == True:
+            return True
+        return False
 
     def run(self, server_hostname, server_port):
         """ running client process """
@@ -17,19 +26,26 @@ class InventoryClient(base.ServiceBase):
             print "Invalid server hostname/port!"
             return
 
-        rev_data = self.client_socket.recv(base.MESSAGE_CHUNK_SIZE)
+        rev_data = self.client_socket.recv(service.MESSAGE_CHUNK_SIZE)
         print rev_data
-        if rev_data == base.DENY_SERVICE_MESSAGE:
+        if rev_data == service.DENY_SERVICE_MESSAGE:
             return
+        elif not self.authenticate():
+            return
+        else:
+            data = service.receive_data_message(self.client_socket)
+            print data
 
         while True:
             try:
-                msg = raw_input(base.CONSOLE_TERM)
-                self.client_socket.sendall(msg)
-                if msg == base.EXIT_COMMAND:
-                    break
-                else:
-                    self.receive_data_message(self.client_socket)
+                msg = raw_input(service.CONSOLE_TERM)
+                if msg:
+                    self.client_socket.sendall(msg)
+                    if msg == service.EXIT_COMMAND:
+                        break
+                    else:
+                        data = service.receive_data_message(self.client_socket)
+                        print data
             except socket.error:
                 print 'Server failed'
                 return
@@ -41,7 +57,7 @@ if __name__ == '__main__':
     usage = "usage: python %prog [options]"
     parser = optparse.OptionParser(usage=usage)
     parser.add_option("-s", "--server", help="the InventoryManagementSystem server hostname or IP address")
-    parser.add_option("-p", "--port", default=base.SERVER_DEFAULT_PORT,
+    parser.add_option("-p", "--port", default=service.SERVER_DEFAULT_PORT,
                         help="socket server listen port [default: %default]")
     (options, args) = parser.parse_args()
     if not options.server:
