@@ -6,10 +6,10 @@ MESSAGE_CHUNK_SIZE = 4096
 SERVER_DEFAULT_PORT = 60000                # Reserve a port for the service.
 CONSOLE_TERM = "MngSys>> "
 EXIT_COMMAND = "exit"
-
+NEW_USER_COMMAND = "new_user"
 
 WELCOME_SERVICE_MESSAGE = "Welcome to the Inventory Management System!"
-ACCEPT_SERVICE_MESSAGE = "Hello %s!!"
+ACCEPT_SERVICE_MESSAGE = "Hello %s!"
 DENY_SERVICE_MESSAGE = "ACCESS DENIED! Reach to maximum number of connections."
 
 def serialize_data_message(data):
@@ -26,7 +26,6 @@ def deserialize_data(data_str):
 def is_error_message(data_obj):
     """ sending an error message """
     if data_obj.has_key("ERROR"):
-        print data_obj["ERROR"]
         return True
     return False
 
@@ -54,9 +53,16 @@ def create_secure_user_info(username, password):
             'sha256', password, username, 100000))
     return {'username': username, 'password_hash': password_hash}
 
-def create_user_info():
+def get_user_info():
     username = raw_input("Enter username: ")
     password = getpass.getpass("Enter password: ")
     user_info = create_secure_user_info(username, password)
     return user_info
 
+def create_new_user():
+    command_info = NEW_USER_COMMAND
+    user_info = get_user_info()
+    command_info += " username=" + user_info["username"]
+    command_info += " password_hash=" + user_info["password_hash"]
+    command_info += " usertype=" + raw_input("Enter usertype: ")
+    return command_info

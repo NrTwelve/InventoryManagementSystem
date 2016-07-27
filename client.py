@@ -11,7 +11,7 @@ class InventoryClient(object):
 
     def authenticate(self):
         """ check authorization for current session """
-        user_info = service.create_user_info()
+        user_info = service.get_user_info()
         service.send_data_message(self.client_socket, user_info)
         respone = service.receive_data_message(self.client_socket)
         if respone == True:
@@ -40,12 +40,15 @@ class InventoryClient(object):
             try:
                 msg = raw_input(service.CONSOLE_TERM)
                 if msg:
-                    self.client_socket.sendall(msg)
+                    
                     if msg == service.EXIT_COMMAND:
                         break
-                    else:
-                        data = service.receive_data_message(self.client_socket)
-                        print data
+                    elif msg == service.NEW_USER_COMMAND:
+                        msg = service.create_new_user()
+
+                    self.client_socket.sendall(msg)
+                    data = service.receive_data_message(self.client_socket)
+                    print data
             except socket.error:
                 print 'Server failed'
                 return

@@ -44,8 +44,9 @@ class Gateway(object):
         """ Main function for gateway, listen to socket connection """
         if not db.handler.administrator_check():
             print "Administrator account is required! Please create ones ..."
-            user_info = service.create_user_info()
-            db.handler.add_user(user_info, db.ADMINISTRATOR_TYPE)
+            user_info = service.get_user_info()
+            user_info['usertype'] = db.ADMINISTRATOR_TYPE
+            db.handler.add_user(user_info)
 
         while True:
             self.server_socket.listen(5)

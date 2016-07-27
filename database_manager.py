@@ -59,7 +59,8 @@ class DataBaseManager(object):
         self.command_map = {
             ADMINISTRATOR_TYPE: {
                 "find": self.find,
-                "add": self.add_entry
+                "add": self.add_entry,
+                "new_user": self.add_user
             },
             GUEST_TYPE: {
                 "find": self.find
@@ -90,11 +91,11 @@ class DataBaseManager(object):
         self.cursor.executescript(RESET_DATABASE)
         self.cursor.executescript(INIT_DATABASE)
 
-    def encrypt_user_info(self, info):
+    def encrypt_user_info(self, password_hash):
         """ encrypt user information in order to store in database """
         salt = os.urandom(32) #get salt of a day
         pass_digest = binascii.hexlify(hashlib.pbkdf2_hmac('sha256',
-                        info["password_hash"], salt, 100000))
+                        password_hash, salt, 100000))
         salt = binascii.hexlify(salt) # convert byte to string
         return pass_digest, salt
 
@@ -129,25 +130,40 @@ class DataBaseManager(object):
             # invalid command for a particular username
             return None
 
-    def add_user(self, user_info, usertype):
+    def add_user(self, user_info):
         """ Add new user to database """
-        if isinstance(user_info, dict):
-            if user_info.has_key('username') and user_info.has_key('password_hash'):
-                pass_digest, salt = self.encrypt_user_info(user_info)
-                self.cursor.execute('''INSERT OR IGNORE INTO Users (username, password_digest, usertype, salt)
-                    VALUES ( ?, ?, ?, ? )''', (user_info['username'], pass_digest, usertype, salt))
-                self.connection.commit()
+        status = "Fail on adding new user!"
+        try:
+            if isinstance(user_info, dict):
+                if user_info.has_key('username') and user_info.has_key('password_hash'):
+                    pass_digest, salt = self.encrypt_user_info(user_info['password_hash'])
+                    self.cursor.execute('''
+                        INSERT OR IGNORE INTO Users (username, password_digest, usertype, salt)
+                        VALUES ( ?, ?, ?, ? )''', (user_info['username'], pass_digest,
+                        user_info['usertype'], salt))
+                    self.connection.commit()
+                    status = "Success!"
+        except Exception, e:
+            status = e
+        return status
 
-    def add_entry(self, new_data):
+    def extract_inventory_keys(self, args, full_keys=False):
+        """ Return a subset of input which contains only key in Inventory database """
+        data = dict()
+        for key in ENTRY_DATA_TEMPLATE.keys():
+            if args.has_key(key):
+                data[key] = args[key]
+            else:
+                if full_keys:
+                    data[key] = ENTRY_DATA_TEMPLATE[key]                
+        return data
+
+    def add_entry(self, args):
         """ Add new data entry, expected new data is stored as dictionary """
         status = "Fail! Can not insert to database"
         try:
-            if isinstance(new_data, dict):
-                data_template = ENTRY_DATA_TEMPLATE
-                for key, value in new_data.items():
-                    if data_template.has_key(key):
-                        data_template[key] = value
-
+            if isinstance(args, dict):
+                data_template = self.extract_inventory_keys(args, True)
                 self.cursor.execute('''INSERT INTO Inventory (
                     type, model, serial_number, import_date, location, status, owner)
                     VALUES ( ?, ?, ?, ?, ?, ?, ? )''',
@@ -162,21 +178,33 @@ class DataBaseManager(object):
 
     def find(self, args):
         """ Querry data from database for given conditions """
-        r = self.cursor.execute("SELECT * FROM Inventory; ")
-        result = r.fetchall()
-        # convert to list of entry data stored by key/value pair
-        item_list = [dict(x) for x in result]
-        data_dict = dict()
-        for item in item_list: # convert to dictionary of list value base on column name
-            for key, value in item.items():
-                try:
-                    data_dict[key].append(value)
-                except KeyError:
-                    data_dict[key] = [value]
-        if data_dict:
-            return self.data_pretty_print(data_dict)
-        else:
-            return ""
+        try:
+            data_conditions = self.extract_inventory_keys(args)
+            command_str = "SELECT * FROM Inventory %s; "
+            conditions = ""
+            conditions_keys = [x+"=?" for x in data_conditions.keys()]
+            if conditions_keys:
+                conditions = "WHERE "
+                conditions += " AND ".join(conditions_keys)
+
+            command_str = command_str % (conditions)
+            r = self.cursor.execute(command_str, tuple(data_conditions.values()))
+            result = r.fetchall()
+            # convert to list of entry data stored by key/value pair
+            item_list = [dict(x) for x in result]
+            data_dict = dict()
+            for item in item_list: # convert to dictionary of list value base on column name
+                for key, value in item.items():
+                    try:
+                        data_dict[key].append(value)
+                    except KeyError:
+                        data_dict[key] = [value]
+            if data_dict:
+                return self.data_pretty_print(data_dict)
+            else:
+                return ""
+        except Exception, e:
+            return e
 
     def execute(self, query_frame, username):
         """ entry function to execute all command """
