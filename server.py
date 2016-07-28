@@ -34,19 +34,19 @@ class Gateway(object):
             return False
         return True
 
-    def authenticate(self, client_socket):
+    def authenticate(self, client_socket, db_handler):
         info = service.receive_data_message(client_socket)
-        result = db.handler.verify_user_info(info)
+        result = db_handler.verify_user_info(info)
         service.send_data_message(client_socket, result)
         return result, info['username']
 
-    def run(self):
+    def run(self, db_handler):
         """ Main function for gateway, listen to socket connection """
-        if not db.handler.administrator_check():
+        if not db_handler.administrator_check():
             print "Administrator account is required! Please create ones ..."
             user_info = service.get_user_info()
             user_info['usertype'] = db.ADMINISTRATOR_TYPE
-            db.handler.add_user(user_info)
+            print db_handler.add_user(user_info)
 
         while True:
             self.server_socket.listen(5)
@@ -56,9 +56,9 @@ class Gateway(object):
                 c.close()
                 continue
             c.sendall(service.WELCOME_SERVICE_MESSAGE)
-            result, username = self.authenticate(c)
+            result, username = self.authenticate(c, db_handler)
             if result:
-                handler = thread_handler.ThreadHandler(c, username)
+                handler = thread_handler.ThreadHandler(c, username, db_handler)
                 handler.start()
 
 
@@ -69,5 +69,6 @@ if __name__ == '__main__':
                         help="socket server listen port [default: %default]")
     (options, args) = parser.parse_args()
 
+    db_handler = db.DataBaseManager()
     gateway = Gateway(options.port)
-    gateway.run()
+    gateway.run(db_handler)
